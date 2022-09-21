@@ -58,7 +58,7 @@ void loop() {
 
     if (change == true) {
         Serial.println("ready to update");
-        if(++mode > 13) mode = 0;
+        if(++mode > 14) mode = 0;
         change = false;
     }
 
@@ -106,6 +106,9 @@ void loop() {
             break;
         case 13:
             prettyWalk(50);
+            break;
+        case 14:
+            prettyComet(100);
             break;
     }
 
@@ -695,3 +698,87 @@ void prettyWalk(int wait) {
     }
 }
 
+
+void prettyComet(int wait) {
+    bool initialized = false;
+    uint8_t max_change = 50;
+    uint8_t tween = 30;
+    uint8_t nextred;
+    uint8_t nextgreen;
+    uint8_t nextblue;
+    uint8_t lastred;
+    uint8_t lastgreen;
+    uint8_t lastblue;
+    
+    int taillength = neopixels.numPixels() / 4;
+    int tailstart = 0;
+    float colorstep = 0.95 / taillength;
+    int colorslength = taillength + 1;
+    int colors[colorslength];
+    int tailStart = 0;
+    int direction = 1;
+    int leftside = -taillength;
+    int rightside = neopixels.numPixels();
+
+    while (true) {
+        if (initialized = false) {
+            lastred = random(0, 255);
+            lastgreen = random(0, 255);
+            lastblue = random(0, 255);
+
+            initialized = true;
+        } else {
+            lastred = nextred;
+            lastgreen = nextgreen;
+            lastblue = nextblue;
+        }
+
+        nextred = permute_color(lastred, max_change);
+        nextgreen = permute_color(lastgreen, max_change);
+        nextblue = permute_color(lastblue, max_change);
+
+        colors[taillength] = neopixels.Color(nextred, nextgreen, nextblue);
+
+        for(int i= taillength - 1; i >= 0; i--) {
+            float a = (float) nextred;
+            float b = (float) nextblue;
+            float c = (float) nextgreen;
+            float d = (float) i + 1;
+
+            nextred =  (uint8_t) a * colorstep * d;
+            nextblue = (uint8_t) b * colorstep * d;
+            nextgreen = (uint8_t) c * colorstep * d;
+            
+            colors[i] = neopixels.Color(nextred, nextgreen, nextblue);
+            Serial.print("Setting color to "); Serial.print(nextred); Serial.print(", ");
+            Serial.print(nextblue); Serial.print(", ");
+            Serial.print(nextgreen); Serial.print(", ");
+            Serial.print(" on pixel number "); Serial.print(i);
+            Serial.println("");
+
+        }
+
+        while (true) {
+            for(int i=0; i < colorslength; i++) {
+                neopixels.setPixelColor(tailstart + i, colors[i]);
+            }
+            neopixels.show();
+            if (delay_and_check(wait)) { 
+                neopixels.clear();        
+                return;
+            }
+            neopixels.clear();
+            tailstart += direction;
+            if(tailstart < leftside || (tailstart >= rightside && !direction != 1)) {
+                //change direction
+                if (direction == 1) {
+                    direction = -1;
+                } else {
+                    direction = 1;
+                }
+                //next color
+                break;
+            }
+        }
+    }
+}
